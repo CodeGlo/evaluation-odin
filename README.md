@@ -1,4 +1,4 @@
-# Aim
+# Introduction
 This repository contains code for evaluating and establishing baseline metrics for our Chat AI Agent. The evaluation framework focuses on three key aspects of the agent's responses:
 
 1. Answer Similarity - Uses embedding-based comparison to measure semantic similarity between generated answers and ground truth
@@ -11,6 +11,8 @@ The metrics help quantify the performance and reliability of the Chat AI Agent a
 ## Datasets
 The datasets directory contains the test data and evaluation results in a compressed tar.gz archive. This includes files/knowledge base 
 on which these metrics are generated.
+
+Please let contact rohit.jindal@getodin.ai if you require the dataset
 
 ## QnA
 The QnA directory contains the 
