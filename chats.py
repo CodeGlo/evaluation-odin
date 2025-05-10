@@ -2,6 +2,10 @@ import requests
 import os
 from datetime import datetime
 import json
+from dotenv import load_dotenv
+
+load_dotenv()
+
 X_API_KEY = os.getenv("X_API_KEY")
 X_API_SECRET = os.getenv("X_API_SECRET")
 
@@ -29,7 +33,7 @@ def submit_question(question, project_id, chat_id):
     response = requests.post(questions_url, data=data, headers=headers)
     return True if response.status_code == 200 else False
 
-def _get_answer(question, project_id, chat_id):
+def _get_answer(question, project_id, chat_id, extended_response=False):
 
     headers = {
         "X-API-KEY": X_API_KEY, 
@@ -40,16 +44,19 @@ def _get_answer(question, project_id, chat_id):
     if response.status_code == 200:
         for msg in response.json()['messages']:
             if msg['message'] == question:
-                return msg['response'] 
+                if extended_response:
+                    return msg
+                else:
+                    return msg['response'] 
     else:
         print(f"Failed to get answer for question: {question}")
     return 'failed'
 
 
-def get_answer(question, project_id, chat_id):
+def get_answer(question, project_id, chat_id, extended_response=False):
     count = 5
     while count > 0:
-        answer = _get_answer(question, project_id, chat_id)
+        answer = _get_answer(question, project_id, chat_id, extended_response)
         if answer != 'failed':
             return answer
         count -= 1

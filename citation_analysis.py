@@ -1,0 +1,136 @@
+import os
+import json
+import numpy as np
+
+def load_metrics_from_files():
+    metrics = {
+        'precision_score': [],
+        'redundancy_score': [],
+    }
+    
+    for file in os.listdir('RetriverEval'):
+        if not file.startswith('citation_eval') or not file.endswith('.json'):
+            continue
+            
+        with open(f'RetriverEval/{file}', 'r') as f:
+            data = json.loads(f.read())
+            for entry in data:
+                for metric in metrics.keys():
+                    value = entry.get(metric)
+                    if value is not None and not np.isnan(value):
+                        metrics[metric].append(value)
+                        
+    return metrics
+
+def calculate_statistics(metrics):
+    stats = {}
+    for metric, values in metrics.items():
+        if values:
+            values_array = np.array(values)
+            stats[metric] = {
+                'avg': np.mean(values_array)
+            }
+    return stats
+
+
+def plot_metric_histograms(metrics):
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    plt.style.use('default')
+    fig, axes = plt.subplots(len(metrics), 1, figsize=(12, 5*len(metrics)))
+    fig.suptitle('Distribution of Metrics', fontsize=16, y=1.02)
+    if len(metrics) == 1:
+        axes = [axes]
+    for ax, (metric_name, values) in zip(axes, metrics.items()):
+        if values:
+            sns.histplot(data=values, bins=30, ax=ax, color='skyblue', alpha=0.6, label='Frequency Distribution')
+            mean_val = np.mean(values)
+            ax.axvline(mean_val, color='red', linestyle='--', linewidth=2, 
+                      label=f'Mean: {mean_val:.3f}')
+            ax.set_title(f'{metric_name} Distribution', fontsize=14, pad=20)
+            ax.set_xlabel('Score', fontsize=12)
+            ax.set_ylabel('Count', fontsize=12)
+            ax.legend(bbox_to_anchor=(1.05, 1), loc='upper left', fontsize=10,
+                     title='Statistics', title_fontsize=12)
+            ax.grid(True, linestyle='--', alpha=0.7)
+    plt.tight_layout()
+    plt.savefig('metrics_histograms.png', bbox_inches='tight', dpi=300)
+    plt.close()
+
+def plot_metric_correlations(metrics):
+    """
+    Generate scatter plots to visualize correlations between different metrics.
+    
+    Args:
+        metrics (dict): Dictionary containing metric names and their values
+    """
+    import matplotlib.pyplot as plt
+    import seaborn as sns
+    
+    # Get all metric names
+    metric_names = list(metrics.keys())
+    n_metrics = len(metric_names)
+    
+    if n_metrics < 2:
+        print("Need at least 2 metrics to create correlation plots")
+        return
+        
+    # Create a figure with subplots for each pair of metrics
+    n_plots = (n_metrics * (n_metrics - 1)) // 2
+    n_cols = min(3, n_plots)
+    n_rows = (n_plots + n_cols - 1) // n_cols
+    
+    fig, axes = plt.subplots(n_rows, n_cols, figsize=(6*n_cols, 5*n_rows))
+    fig.suptitle('Correlations Between Metrics', fontsize=16, y=1.02)
+    
+    # Flatten axes array for easier indexing
+    if n_plots > 1:
+        axes = axes.flatten()
+    else:
+        axes = [axes]
+        
+    plot_idx = 0
+    # Create scatter plots for each pair of metrics
+    for i in range(n_metrics):
+        for j in range(i+1, n_metrics):
+            if plot_idx < len(axes):
+                metric1 = metric_names[i]
+                metric2 = metric_names[j]
+                
+                # Get values, removing any None or missings values
+                values1 = [v for v in metrics[metric1] if v is not None]
+                values2 = [v for v in metrics[metric2] if v is not None]
+                
+                # Only plot if we have matching data points
+                min_len = min(len(values1), len(values2))
+                if min_len > 0:
+                    # Calculate correlation coefficient
+                    corr = np.corrcoef(values1[:min_len], values2[:min_len])[0,1]
+                    
+                    # Create scatter plot using sequence for x-axi
+                    # s
+                    x_seq = list(range(min_len))
+                    axes[plot_idx].scatter(x_seq, values2[:min_len], 
+                                         alpha=0.5, color='skyblue')
+                    axes[plot_idx].set_xlabel('Question Sequence Count', fontsize=10)
+                    axes[plot_idx].set_ylabel(metric2, fontsize=10)
+                    axes[plot_idx].grid(True, linestyle='--', alpha=0.7)
+                
+                plot_idx += 1
+    
+    # Remove any empty subplots
+    for idx in range(plot_idx, len(axes)):
+        fig.delaxes(axes[idx])
+    
+    plt.tight_layout()
+    plt.savefig('metric_correlations.png', bbox_inches='tight', dpi=300)
+    plt.close()
+
+
+if __name__ == "__main__":
+    metrics = load_metrics_from_files()
+    print("Loaded metrics:", {k: len(v) for k, v in metrics.items()})
+    for metric, values in metrics.items():
+        if values:
+            print(f"{metric} average: {np.mean(values):.3f}")
+    plot_metric_histograms(metrics)
